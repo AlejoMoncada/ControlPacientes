@@ -265,7 +265,7 @@
       if (draParam === 'katherine' || draParam === 'maria') return draParam;
 
       const path = (window.location.pathname || '/').toLowerCase().replace(/\/+$/, '');
-      if (path.endsWith('/katherine') || path === '/katherine') return 'katherine';
+      if (path.endsWith('/katherine') || path.endsWith('/kathe') || path === '/katherine' || path === '/kathe') return 'katherine';
       if (path.endsWith('/maria') || path === '/maria') return 'maria';
       return null;
     }
