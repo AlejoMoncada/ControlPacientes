@@ -46,12 +46,15 @@
           <span class="text-slate-400 font-medium" id="fechaHoyTxt">Hoy</span>
           
           <!-- Menú de Exportaciones -->
-          <div class="flex items-center gap-1.5">
-            <button onclick="exportarCSV('hoy')" title="Descargar solo los de hoy" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded-lg border border-slate-700 transition">
+          <div class="flex items-center gap-1.5 flex-wrap justify-end">
+            <button onclick="exportarCSV('hoy')" title="Descargar solo los de hoy de esta doctora" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded-lg border border-slate-700 transition">
               📥 Hoy
             </button>
-            <button onclick="exportarCSV('consolidado')" title="Descargar histórico general acumulado" class="text-[11px] bg-sky-950 hover:bg-sky-900 text-sky-300 px-2.5 py-1 rounded-lg border border-sky-800/60 font-semibold transition">
-              📊 Consolidado
+            <button onclick="exportarCSV('consolidado')" title="Histórico de esta doctora" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded-lg border border-slate-700 transition">
+              👤 Mío
+            </button>
+            <button onclick="exportarCSV('global')" title="Histórico unificado de María + Katherine" class="text-[11px] bg-sky-950 hover:bg-sky-900 text-sky-300 px-2.5 py-1 rounded-lg border border-sky-800/60 font-semibold transition">
+              📊 Total
             </button>
           </div>
         </div>
@@ -194,27 +197,50 @@
       </div>
     </section>
 
-    <!-- Plegable: Consolidado Histórico General Acumulado -->
-    <details class="bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3.5 shadow-md group">
+    <!-- Plegable: Consolidado unificado (ambas doctoras) -->
+    <details class="bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3.5 shadow-md group" open>
       <summary class="text-xs font-bold text-slate-300 cursor-pointer flex items-center justify-between">
         <span class="flex items-center gap-1.5">
           <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-          Ver Consolidado Histórico Completo
+          Consolidado general (María + Katherine)
         </span>
         <span class="text-[11px] text-sky-400 group-open:rotate-180 transition-transform">▼</span>
       </summary>
-      
-      <div class="mt-3 pt-3 border-t border-slate-800 text-xs space-y-2.5">
+
+      <div class="mt-3 pt-3 border-t border-slate-800 text-xs space-y-3">
+        <p class="text-[11px] text-slate-500 leading-relaxed">
+          Los 2 accesos escriben en la misma base local. Aquí se unifica todo para reportes.
+        </p>
+
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+            <div id="countGlobalTotal" class="text-xl font-black text-white">0</div>
+            <div class="text-[10px] font-bold text-slate-400 uppercase mt-0.5">Total</div>
+          </div>
+          <div class="bg-rose-950/20 border border-rose-900/40 rounded-xl p-2.5">
+            <div id="countGlobalMaria" class="text-xl font-black text-rose-300">0</div>
+            <div class="text-[10px] font-bold text-rose-300/80 uppercase mt-0.5">María</div>
+          </div>
+          <div class="bg-teal-950/20 border border-teal-900/40 rounded-xl p-2.5">
+            <div id="countGlobalKatherine" class="text-xl font-black text-teal-300">0</div>
+            <div class="text-[10px] font-bold text-teal-300/80 uppercase mt-0.5">Katherine</div>
+          </div>
+        </div>
+
         <div class="flex justify-between items-center text-[11px] text-slate-400">
-          <span>Acumulado de todas las jornadas:</span>
+          <span>Por auxiliar (ambas doctoras):</span>
           <span id="txtConsolidadoTotal" class="font-bold text-white">0 registros</span>
         </div>
         <div id="listaConsolidadoAuxiliares" class="space-y-1.5">
-          <!-- Render dinámico consolidado -->
+          <!-- Render dinámico consolidado global -->
         </div>
-        <div class="pt-2 flex justify-end">
-          <button onclick="exportarCSV('consolidado')" class="text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold py-1.5 px-3 rounded-lg transition">
-            Descargar Todo en CSV (.csv)
+
+        <div class="pt-1 flex flex-wrap gap-2 justify-end">
+          <button onclick="exportarCSV('consolidado')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-1.5 px-3 rounded-lg border border-slate-700 transition">
+            CSV de esta doctora
+          </button>
+          <button onclick="exportarCSV('global')" class="text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold py-1.5 px-3 rounded-lg transition">
+            CSV consolidado total
           </button>
         </div>
       </div>
@@ -468,17 +494,21 @@
       document.getElementById('barMal').style.width = `${pctMal}%`;
       document.getElementById('barSin').style.width = `${pctSin}%`;
 
-      // Contador global histórico en el header
+      // Contador histórico de esta doctora en el header
       const totalGlobalDoctora = historicoGeneral.filter(r => r.perfilId === perfilActivo).length;
-      document.getElementById('txtTotalHistorico').textContent = `Total acumulado: ${totalGlobalDoctora}`;
+      document.getElementById('txtTotalHistorico').textContent = `Mío: ${totalGlobalDoctora} · Todos: ${historicoGeneral.length}`;
 
-      // Desglose por auxiliares en el turno actual
+      // Desglose por auxiliares en el turno actual (solo esta doctora)
       renderizarResumenAuxiliares(registrosTurno, 'listaAuxiliaresTurno');
 
-      // Desglose histórico consolidado (todas las atenciones de esta doctora)
-      const registrosDoctoraTotal = historicoGeneral.filter(r => r.perfilId === perfilActivo);
-      renderizarResumenAuxiliares(registrosDoctoraTotal, 'listaConsolidadoAuxiliares');
-      document.getElementById('txtConsolidadoTotal').textContent = `${registrosDoctoraTotal.length} pacientes acumulados`;
+      // Consolidado unificado: María + Katherine en el mismo log
+      const totalMaria = historicoGeneral.filter(r => r.perfilId === 'maria').length;
+      const totalKatherine = historicoGeneral.filter(r => r.perfilId === 'katherine').length;
+      document.getElementById('countGlobalTotal').textContent = historicoGeneral.length;
+      document.getElementById('countGlobalMaria').textContent = totalMaria;
+      document.getElementById('countGlobalKatherine').textContent = totalKatherine;
+      renderizarResumenAuxiliares(historicoGeneral, 'listaConsolidadoAuxiliares');
+      document.getElementById('txtConsolidadoTotal').textContent = `${historicoGeneral.length} pacientes acumulados`;
 
       // Últimos 4 movimientos de hoy
       const historialEl = document.getElementById('listaHistorial');
@@ -547,6 +577,9 @@
     }
 
     // EXPORTACIÓN A CSV FLEXIBLE
+    // hoy = solo esta doctora hoy
+    // consolidado = solo esta doctora (todo)
+    // global = María + Katherine unificado
     function exportarCSV(modo) {
       const fechaHoy = new Date().toISOString().slice(0, 10);
       let datosAExportar = [];
@@ -559,20 +592,27 @@
           mostrarToast('No hay datos registrados en el día de hoy');
           return;
         }
+      } else if (modo === 'global') {
+        datosAExportar = [...historicoGeneral].sort((a, b) => a.timestamp - b.timestamp);
+        nombreArchivo = `consolidado_general_maria_katherine_${fechaHoy}.csv`;
+        if (datosAExportar.length === 0) {
+          mostrarToast('El consolidado general está vacío');
+          return;
+        }
       } else {
-        // Modo 'consolidado': Todo el histórico acumulado de la doctora
+        // Modo 'consolidado': histórico de esta doctora
         datosAExportar = historicoGeneral.filter(r => r.perfilId === perfilActivo);
         nombreArchivo = `consolidado_historico_${perfilActivo}_${fechaHoy}.csv`;
         if (datosAExportar.length === 0) {
-          mostrarToast('El histórico consolidado está vacío');
+          mostrarToast('El histórico de esta doctora está vacío');
           return;
         }
       }
 
       // Estructura tabular lista para Excel, Google Sheets, Pandas o SQL
-      let csv = 'ID_Registro,Doctora,Fecha,Hora,Auxiliar,Estado_Triaje\n';
+      let csv = 'ID_Registro,Doctora,Perfil_ID,Fecha,Hora,Auxiliar,Estado_Triaje\n';
       datosAExportar.forEach(r => {
-        csv += `${r.id},"${r.doctora}","${r.fecha}","${r.hora}","${r.auxiliar}","${r.estado}"\n`;
+        csv += `${r.id},"${r.doctora}","${r.perfilId || ''}","${r.fecha}","${r.hora}","${r.auxiliar}","${r.estado}"\n`;
       });
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
