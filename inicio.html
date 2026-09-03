@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Pacientes · Acceso</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4 sm:p-6">
+  <main class="w-full max-w-md space-y-5">
+    <header class="text-center space-y-2">
+      <p class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-slate-500">Consulta médica</p>
+      <h1 class="text-2xl font-extrabold tracking-tight">Control de Pacientes</h1>
+      <p class="text-sm text-slate-400">Elige el enlace de la doctora para abrir su sesión</p>
+    </header>
+
+    <section class="space-y-3">
+      <a href="/maria"
+        class="block rounded-2xl border border-rose-500/30 bg-gradient-to-br from-rose-600/20 to-slate-900 p-5 shadow-xl shadow-rose-950/30 transition hover:border-rose-400/50 hover:from-rose-600/30 active:scale-[0.99]">
+        <div class="flex items-center gap-4">
+          <span class="w-12 h-12 rounded-2xl bg-rose-500/20 text-rose-300 ring-2 ring-rose-500/30 flex items-center justify-center text-xl">👩‍⚕️</span>
+          <div class="flex-1">
+            <div class="text-lg font-extrabold text-white">Dra. María</div>
+            <div class="text-xs text-rose-200/80 font-medium">Enlace personal · sesión fija</div>
+          </div>
+          <span class="text-rose-300 text-xl">→</span>
+        </div>
+      </a>
+
+      <a href="/katherine"
+        class="block rounded-2xl border border-teal-500/30 bg-gradient-to-br from-teal-600/20 to-slate-900 p-5 shadow-xl shadow-teal-950/30 transition hover:border-teal-400/50 hover:from-teal-600/30 active:scale-[0.99]">
+        <div class="flex items-center gap-4">
+          <span class="w-12 h-12 rounded-2xl bg-teal-500/20 text-teal-300 ring-2 ring-teal-500/30 flex items-center justify-center text-xl">👩‍⚕️</span>
+          <div class="flex-1">
+            <div class="text-lg font-extrabold text-white">Dra. Katherine</div>
+            <div class="text-xs text-teal-200/80 font-medium">Enlace personal · sesión fija</div>
+          </div>
+          <span class="text-teal-300 text-xl">→</span>
+        </div>
+      </a>
+    </section>
+
+    <p class="text-center text-[11px] text-slate-500 leading-relaxed">
+      Comparte solo el enlace de cada doctora.<br>
+      Los datos de cada una se guardan por separado en este dispositivo.
+    </p>
+  </main>
+</body>
+</html>

@@ -34,16 +34,9 @@
           </div>
         </div>
 
-        <!-- Selector de Perfil -->
-        <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold">
-          <button id="btnPerfilMaria" onclick="cambiarPerfil('maria')" 
-            class="px-3 py-1.5 rounded-lg transition-all text-slate-400 hover:text-white">
-            María
-          </button>
-          <button id="btnPerfilKatherine" onclick="cambiarPerfil('katherine')" 
-            class="px-3 py-1.5 rounded-lg transition-all text-slate-400 hover:text-white">
-            Katherine
-          </button>
+        <!-- Enlace fijo del perfil (sin selector cruzado) -->
+        <div id="badgePerfilFijo" class="px-3 py-1.5 rounded-xl border text-xs font-bold">
+          Enlace personal
         </div>
       </div>
 
@@ -251,23 +244,34 @@
         colorPill: 'bg-rose-600 text-white shadow-rose-900/40',
         colorBadge: 'text-rose-400',
         accentBar: 'bg-rose-500',
-        avatarBg: 'bg-rose-500/20 text-rose-300 ring-rose-500/40'
+        avatarBg: 'bg-rose-500/20 text-rose-300 ring-rose-500/40',
+        badgeFijo: 'bg-rose-500/15 text-rose-300 border-rose-500/30'
       },
       katherine: {
         nombre: 'Dra. Katherine',
         colorPill: 'bg-teal-600 text-white shadow-teal-900/40',
         colorBadge: 'text-teal-400',
         accentBar: 'bg-teal-400',
-        avatarBg: 'bg-teal-500/20 text-teal-300 ring-teal-500/40'
+        avatarBg: 'bg-teal-500/20 text-teal-300 ring-teal-500/40',
+        badgeFijo: 'bg-teal-500/15 text-teal-300 border-teal-500/30'
       }
     };
 
-    // Parámetro en URL (?dra=maria o ?dra=katherine)
-    const urlParams = new URLSearchParams(window.location.search);
-    let draParam = (urlParams.get('dra') || '').toLowerCase();
-    let perfilActivo = (draParam === 'katherine' || draParam === 'maria') 
-      ? draParam 
-      : (localStorage.getItem('hcd_perfil_activo') || 'maria');
+    // Perfil fijo por ruta o query:
+    // /maria  | /katherine  | ?dra=maria | ?dra=katherine
+    function resolverPerfilDesdeUrl() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const draParam = (urlParams.get('dra') || '').toLowerCase();
+      if (draParam === 'katherine' || draParam === 'maria') return draParam;
+
+      const path = (window.location.pathname || '/').toLowerCase().replace(/\/+$/, '');
+      if (path.endsWith('/katherine') || path === '/katherine') return 'katherine';
+      if (path.endsWith('/maria') || path === '/maria') return 'maria';
+      return null;
+    }
+
+    let perfilActivo = resolverPerfilDesdeUrl() || 'maria';
+    localStorage.setItem('hcd_perfil_activo', perfilActivo);
 
     let auxiliarActiva = localStorage.getItem(`${perfilActivo}_auxiliar`) || AUXILIARES[0];
 
@@ -290,35 +294,17 @@
 
     function aplicarPerfilVisual() {
       const p = PERFILES[perfilActivo];
+      document.title = `${p.nombre} · Control de Pacientes`;
       document.getElementById('draNombreTxt').textContent = p.nombre;
       document.getElementById('draSubtituloMétricas').textContent = `Jornada de ${p.nombre}`;
       const avatar = document.getElementById('draAvatar');
       avatar.className = `w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ring-2 shadow-md ${p.avatarBg}`;
 
-      const btnM = document.getElementById('btnPerfilMaria');
-      const btnK = document.getElementById('btnPerfilKatherine');
-
-      if (perfilActivo === 'maria') {
-        btnM.className = `px-3 py-1.5 rounded-lg font-bold shadow-md transition-all ${p.colorPill}`;
-        btnK.className = `px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition-all`;
-      } else {
-        btnK.className = `px-3 py-1.5 rounded-lg font-bold shadow-md transition-all ${p.colorPill}`;
-        btnM.className = `px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition-all`;
-      }
+      const badge = document.getElementById('badgePerfilFijo');
+      badge.className = `px-3 py-1.5 rounded-xl border text-xs font-bold ${p.badgeFijo}`;
+      badge.textContent = p.nombre;
 
       document.getElementById('cooldownBar').className = `h-full ${p.accentBar} w-0`;
-    }
-
-    function cambiarPerfil(nuevoPerfil) {
-      if (perfilActivo === nuevoPerfil) return;
-      perfilActivo = nuevoPerfil;
-      localStorage.setItem('hcd_perfil_activo', perfilActivo);
-      auxiliarActiva = localStorage.getItem(`${perfilActivo}_auxiliar`) || AUXILIARES[0];
-
-      aplicarPerfilVisual();
-      renderizarAuxiliaresPills();
-      actualizarPantalla();
-      mostrarToast(`Sesión: ${PERFILES[perfilActivo].nombre}`);
     }
 
     function renderizarAuxiliaresPills() {
