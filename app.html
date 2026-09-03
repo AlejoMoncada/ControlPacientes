@@ -34,9 +34,13 @@
           </div>
         </div>
 
-        <!-- Enlace fijo del perfil (sin selector cruzado) -->
-        <div id="badgePerfilFijo" class="px-3 py-1.5 rounded-xl border text-xs font-bold">
-          Enlace personal
+        <div class="flex flex-col items-end gap-1.5">
+          <div id="badgePerfilFijo" class="px-3 py-1.5 rounded-xl border text-xs font-bold">
+            Enlace personal
+          </div>
+          <div id="badgeNube" class="px-2 py-1 rounded-lg border text-[10px] font-bold border-slate-700 text-slate-400 bg-slate-950/70">
+            Nube: conectando…
+          </div>
         </div>
       </div>
 
@@ -160,17 +164,17 @@
           <span class="text-xs bg-amber-900/80 px-2.5 py-1.5 rounded-lg text-amber-200 font-extrabold">+1</span>
         </button>
 
-        <!-- Botón 3: SIN Datos -->
+        <!-- Botón 3: SIN Datos (mismo peso visual que Bien/Mal) -->
         <button id="btnSin" onclick="registrar('SIN Datos')"
-          class="btn-registro group relative flex items-center justify-between p-4 rounded-2xl bg-slate-900 border border-slate-800 active:scale-[0.98] text-slate-200 font-bold transition shadow-md disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none">
+          class="btn-registro group relative flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-rose-600 to-rose-700 active:scale-[0.98] text-white font-bold transition shadow-lg shadow-rose-950/40 ring-1 ring-rose-400/30 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none">
           <div class="flex items-center gap-3 text-left">
-            <div class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center text-xl shrink-0">❌</div>
+            <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-xl shrink-0">❌</div>
             <div>
-              <div class="text-base font-extrabold text-white leading-tight">Sin Datos</div>
-              <div class="text-xs font-normal text-slate-400">Ingresó directamente a consulta sin triaje</div>
+              <div class="text-base font-extrabold leading-tight">Sin Datos</div>
+              <div class="text-xs font-normal text-rose-100/90">Ingresó directamente a consulta sin triaje</div>
             </div>
           </div>
-          <span class="text-xs bg-slate-800 px-2.5 py-1.5 rounded-lg text-slate-300 font-extrabold">+1</span>
+          <span class="text-xs bg-rose-900/80 px-2.5 py-1.5 rounded-lg text-rose-100 font-extrabold">+1</span>
         </button>
 
       </div>
@@ -209,7 +213,7 @@
 
       <div class="mt-3 pt-3 border-t border-slate-800 text-xs space-y-3">
         <p class="text-[11px] text-slate-500 leading-relaxed">
-          Los 2 accesos escriben en la misma base local. Aquí se unifica todo para reportes.
+          Los 2 accesos guardan en la nube y se consolidan aquí (María + Katherine), con respaldo local.
         </p>
 
         <div class="grid grid-cols-3 gap-2 text-center">
@@ -302,11 +306,137 @@
     let auxiliarActiva = localStorage.getItem(`${perfilActivo}_auxiliar`) || AUXILIARES[0];
 
     // STORAGE:
-    // 1. 'hcd_master_log': Histórico general permanente (nunca se borra al reiniciar turno)
-    // 2. 'hcd_reset_timestamp_{doctora}': Marca temporal para filtrar la vista actual del turno
-    let historicoGeneral = JSON.parse(localStorage.getItem('hcd_master_log') || '[]');
+    // 1. local: 'hcd_master_log' (respaldo offline)
+    // 2. nube: GET/POST/DELETE /api/registros (fuente de verdad entre dispositivos)
+    // 3. 'hcd_reset_timestamp_{doctora}': filtro visual del turno actual
+    const API_URL = '/api/registros';
+    let nubeOk = false;
+    let sincronizando = false;
+    let historicoGeneral = cargarLocal();
 
-    window.addEventListener('DOMContentLoaded', () => {
+    function cargarLocal() {
+      try {
+        const raw = JSON.parse(localStorage.getItem('hcd_master_log') || '[]');
+        return Array.isArray(raw) ? raw.map(normalizarRegistro) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function normalizarRegistro(r = {}) {
+      const timestamp = Number(r.timestamp) || Date.now();
+      return {
+        id: r.id,
+        clientId: r.clientId || r.client_id || `legacy_${timestamp}_${r.perfilId || 'x'}_${r.estado || 'x'}`,
+        timestamp,
+        fecha: r.fecha || new Date(timestamp).toISOString().slice(0, 10),
+        hora: r.hora || '',
+        doctora: r.doctora || '',
+        perfilId: r.perfilId || '',
+        auxiliar: r.auxiliar || '',
+        estado: r.estado || '',
+      };
+    }
+
+    function guardarLocal(lista) {
+      historicoGeneral = lista.map((r, idx) => ({ ...normalizarRegistro(r), id: idx + 1 }));
+      localStorage.setItem('hcd_master_log', JSON.stringify(historicoGeneral));
+    }
+
+    function mergeRegistros(base, extra) {
+      const map = new Map();
+      [...base, ...extra].map(normalizarRegistro).forEach((r) => {
+        if (!r.clientId) return;
+        const prev = map.get(r.clientId);
+        if (!prev || Number(r.timestamp) >= Number(prev.timestamp)) map.set(r.clientId, r);
+      });
+      return [...map.values()].sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+    }
+
+    function setEstadoNube(texto, tipo = 'info') {
+      const el = document.getElementById('badgeNube');
+      if (!el) return;
+      const estilos = {
+        ok: 'border-emerald-700/60 text-emerald-300 bg-emerald-950/40',
+        warn: 'border-amber-700/60 text-amber-300 bg-amber-950/40',
+        error: 'border-rose-700/60 text-rose-300 bg-rose-950/40',
+        info: 'border-slate-700 text-slate-400 bg-slate-950/70',
+      };
+      el.className = `px-2 py-1 rounded-lg border text-[10px] font-bold ${estilos[tipo] || estilos.info}`;
+      el.textContent = texto;
+    }
+
+    async function api(method, payload) {
+      const res = await fetch(API_URL, {
+        method,
+        headers: payload ? { 'Content-Type': 'application/json' } : undefined,
+        body: payload ? JSON.stringify(payload) : undefined,
+        cache: 'no-store',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || `Error nube (${res.status})`);
+      }
+      return data;
+    }
+
+    async function sincronizarDesdeNube() {
+      if (sincronizando) return;
+      sincronizando = true;
+      setEstadoNube('Nube: sincronizando…', 'info');
+      try {
+        const data = await api('GET');
+        const remotos = Array.isArray(data.registros) ? data.registros : [];
+        const mezclado = mergeRegistros(historicoGeneral, remotos);
+        guardarLocal(mezclado);
+        nubeOk = true;
+        setEstadoNube(`Nube: OK · ${historicoGeneral.length}`, 'ok');
+
+        // Si había locales no subidos, empujarlos
+        if (historicoGeneral.length > remotos.length) {
+          await api('POST', { registros: historicoGeneral });
+        }
+        actualizarPantalla();
+      } catch (err) {
+        nubeOk = false;
+        setEstadoNube('Nube: offline (local)', 'warn');
+        console.warn('Sync nube falló:', err);
+      } finally {
+        sincronizando = false;
+      }
+    }
+
+    async function guardarEnNube(registro) {
+      try {
+        const data = await api('POST', { registro });
+        if (Array.isArray(data.registros)) {
+          guardarLocal(mergeRegistros(historicoGeneral, data.registros));
+        }
+        nubeOk = true;
+        setEstadoNube(`Nube: guardado · ${historicoGeneral.length}`, 'ok');
+      } catch (err) {
+        nubeOk = false;
+        setEstadoNube('Nube: pendiente local', 'warn');
+        console.warn('Guardado nube falló:', err);
+      }
+    }
+
+    async function borrarEnNube(clientId) {
+      try {
+        const data = await api('DELETE', { clientId });
+        if (Array.isArray(data.registros)) {
+          guardarLocal(data.registros);
+        }
+        nubeOk = true;
+        setEstadoNube(`Nube: OK · ${historicoGeneral.length}`, 'ok');
+      } catch (err) {
+        nubeOk = false;
+        setEstadoNube('Nube: sync pendiente', 'warn');
+        console.warn('Borrado nube falló:', err);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('fechaHoyTxt').textContent = new Date().toLocaleDateString('es-ES', { 
         weekday: 'long', 
         day: 'numeric', 
@@ -316,6 +446,12 @@
       aplicarPerfilVisual();
       renderizarAuxiliaresPills();
       actualizarPantalla();
+      await sincronizarDesdeNube();
+    });
+
+    // Re-sync al volver a la pestaña
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') sincronizarDesdeNube();
     });
 
     function aplicarPerfilVisual() {
@@ -364,7 +500,7 @@
     }
 
     // REGISTRO CON PROTECCIÓN ANTI-REBOTE
-    function registrar(tipoEstado) {
+    async function registrar(tipoEstado) {
       if (bloqueado) return;
 
       bloquearBotones();
@@ -373,8 +509,8 @@
       const fechaISO = ahora.toISOString().slice(0, 10);
       const horaStr = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-      const nuevoRegistro = {
-        id: historicoGeneral.length + 1,
+      const nuevoRegistro = normalizarRegistro({
+        clientId: `c_${ahora.getTime()}_${Math.random().toString(36).slice(2, 9)}`,
         timestamp: ahora.getTime(),
         doctora: PERFILES[perfilActivo].nombre,
         perfilId: perfilActivo,
@@ -382,14 +518,16 @@
         estado: tipoEstado, // 'Datos BIEN', 'Datos MAL', 'SIN Datos'
         hora: horaStr,
         fecha: fechaISO
-      };
+      });
 
-      // Guardar en el histórico general consolidado
-      historicoGeneral.push(nuevoRegistro);
-      localStorage.setItem('hcd_master_log', JSON.stringify(historicoGeneral));
-
+      // 1) Guardado local inmediato
+      guardarLocal([...historicoGeneral, nuevoRegistro]);
       actualizarPantalla();
       mostrarToast(`+1 ${tipoEstado} (${auxiliarActiva})`);
+
+      // 2) Persistencia en nube (compartida entre dispositivos)
+      await guardarEnNube(nuevoRegistro);
+      actualizarPantalla();
     }
 
     function bloquearBotones() {
@@ -411,7 +549,7 @@
       }, COOLDOWN_MS);
     }
 
-    function deshacer() {
+    async function deshacer() {
       // Buscar el último registro hecho por esta doctora en la jornada actual
       const resetTime = parseInt(localStorage.getItem(`hcd_reset_timestamp_${perfilActivo}`) || '0', 10);
       const fechaHoy = new Date().toISOString().slice(0, 10);
@@ -431,10 +569,16 @@
         return;
       }
 
-      const eliminado = historicoGeneral.splice(indiceParaBorrar, 1)[0];
-      localStorage.setItem('hcd_master_log', JSON.stringify(historicoGeneral));
+      const eliminado = historicoGeneral[indiceParaBorrar];
+      const siguiente = historicoGeneral.filter((_, idx) => idx !== indiceParaBorrar);
+      guardarLocal(siguiente);
       actualizarPantalla();
       mostrarToast(`Deshecho: ${eliminado.estado} (${eliminado.auxiliar})`);
+
+      if (eliminado.clientId) {
+        await borrarEnNube(eliminado.clientId);
+        actualizarPantalla();
+      }
     }
 
     // CIERRE / REINICIO DE TURNO SIN BORRAR HISTÓRICO
